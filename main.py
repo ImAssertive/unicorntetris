@@ -5,6 +5,9 @@ WIDTH = 16*TILESIZE
 HEIGHT = 16*TILESIZE
 HATENABLED = False
 
+if HATENABLED:
+    import unicornhathd
+
 class Block(object):
     def __init__(self, details):
         self.x = 8
@@ -27,6 +30,8 @@ def renderGrid(surface, grid):
     for i in range(len(grid)):
         for j in range(len(grid)):
             pygame.draw.rect(surface, grid[i][j], (j*TILESIZE, i*TILESIZE, TILESIZE, TILESIZE), 0)
+            if HATENABLED:
+                unicornhathd.set_pixel(i, j, grid[i][j][0], grid[i][j][1], grid[i][j][2])
 
     for i in range (len(grid)):
         pygame.draw.line(surface, (255,255,255), (0, i*TILESIZE), (WIDTH, i*TILESIZE))#Draws horizontal lines
@@ -66,6 +71,26 @@ def convertShape(shape): # Probably put this inside shape class
         positions[i] = (pos[0] - 2, pos[1] - 4) ##Fixes the issue with all coords being offset by the amount of "."s - Prevents out of bounds errors
 
     return positions
+
+def clearRows(grid, locked_positions):
+    increment = 0
+    for i in range(len(grid)-1, -1, -1):
+        row = grid[i]
+        if (0,0,0) not in row:
+            increment += 1 ##Increase the amount of total cleared rows
+            ind = i
+            for j in range(len(row)):
+                try:
+                    del locked_positions[(j,i)]
+                except:
+                    continue
+    if increment > 0: #If a row has been cleared
+        for key in sorted(list(locked_positions), key=lambda x: x[1])[::-1]: #Sorts locked positions by reverse Y value
+            x, y = key
+            if y < ind:
+                new_key = x, (y+increment)
+                locked_positions[new_key] = locked_positions.pop(key)#Replaces Key
+
 
 def main(surface):
     locked_positions = {}
@@ -134,6 +159,7 @@ def main(surface):
             current_block = next_block
             next_block = getBlock()
             change_piece = False
+            clearRows(grid, locked_positions)
 
         #Check if lost (move into new function)
         if checkGameOver(locked_positions):
